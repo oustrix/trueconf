@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"net/http"
+	"refactoring/internal/entity"
 	"strconv"
 	"time"
 )
@@ -16,15 +17,9 @@ import (
 const store = `users.json`
 
 type (
-	User struct {
-		CreatedAt   time.Time `json:"created_at"`
-		DisplayName string    `json:"display_name"`
-		Email       string    `json:"email"`
-	}
-	UserList  map[string]User
 	UserStore struct {
-		Increment int      `json:"increment"`
-		List      UserList `json:"list"`
+		Increment int             `json:"increment"`
+		List      entity.UserList `json:"list"`
 	}
 )
 
@@ -91,7 +86,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.Increment++
-	u := User{
+	u := entity.User{
 		CreatedAt:   time.Now(),
 		DisplayName: request.DisplayName,
 		Email:       request.DisplayName,
