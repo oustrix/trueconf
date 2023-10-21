@@ -51,15 +51,8 @@ func searchUsers(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, users)
 }
 
-type CreateUserRequest struct {
-	DisplayName string `json:"display_name"`
-	Email       string `json:"email"`
-}
-
-func (c *CreateUserRequest) Bind(r *http.Request) error { return nil }
-
 func createUser(w http.ResponseWriter, r *http.Request) {
-	request := CreateUserRequest{}
+	request := entity.CreateUserRequest{}
 
 	if err := render.Bind(r, &request); err != nil {
 		_ = render.Render(w, r, ErrInvalidRequest(err))
@@ -92,14 +85,8 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, user)
 }
 
-type UpdateUserRequest struct {
-	DisplayName string `json:"display_name"`
-}
-
-func (c *UpdateUserRequest) Bind(r *http.Request) error { return nil }
-
 func updateUser(w http.ResponseWriter, r *http.Request) {
-	request := UpdateUserRequest{}
+	request := entity.UpdateUserRequest{}
 
 	if err := render.Bind(r, &request); err != nil {
 		_ = render.Render(w, r, ErrInvalidRequest(err))
