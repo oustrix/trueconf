@@ -1,7 +1,16 @@
 package main
 
-import "refactoring/internal/app"
+import (
+	"log"
+	"refactoring/config"
+	"refactoring/internal/app"
+)
 
 func main() {
-	app.Run()
+	cfg, err := config.NewConfig()
+	if err != nil {
+		log.Fatalf("Config error: %v", err)
+	}
+
+	app.Run(cfg)
 }
