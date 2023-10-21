@@ -2,4 +2,4 @@ http:
   port: '3333'
 
 store:
-  users: 'users.json'
+  users: 'data/users.json'
