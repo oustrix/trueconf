@@ -1,31 +1,18 @@
 package app
 
 import (
-	"encoding/json"
-	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
-	"io/fs"
-	"io/ioutil"
 	"net/http"
 	"refactoring/internal/entity"
-	"strconv"
+	usersRepository "refactoring/internal/repository/json"
 	"time"
 )
 
 const store = `users.json`
 
-type (
-	UserStore struct {
-		Increment int             `json:"increment"`
-		List      entity.UserList `json:"list"`
-	}
-)
-
-var (
-	UserNotFound = errors.New("user_not_found")
-)
+var usersRepo = usersRepository.NewUsersRepository(store)
 
 func Run() {
 	r := chi.NewRouter()
@@ -59,11 +46,9 @@ func Run() {
 }
 
 func searchUsers(w http.ResponseWriter, r *http.Request) {
-	f, _ := ioutil.ReadFile(store)
-	s := UserStore{}
-	_ = json.Unmarshal(f, &s)
+	users := usersRepo.GetUsers()
 
-	render.JSON(w, r, s.List)
+	render.JSON(w, r, users)
 }
 
 type CreateUserRequest struct {
@@ -74,10 +59,6 @@ type CreateUserRequest struct {
 func (c *CreateUserRequest) Bind(r *http.Request) error { return nil }
 
 func createUser(w http.ResponseWriter, r *http.Request) {
-	f, _ := ioutil.ReadFile(store)
-	s := UserStore{}
-	_ = json.Unmarshal(f, &s)
-
 	request := CreateUserRequest{}
 
 	if err := render.Bind(r, &request); err != nil {
@@ -85,18 +66,13 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.Increment++
 	u := entity.User{
 		CreatedAt:   time.Now(),
 		DisplayName: request.DisplayName,
 		Email:       request.DisplayName,
 	}
 
-	id := strconv.Itoa(s.Increment)
-	s.List[id] = u
-
-	b, _ := json.Marshal(&s)
-	_ = ioutil.WriteFile(store, b, fs.ModePerm)
+	id := usersRepo.CreateUser(&u)
 
 	render.Status(r, http.StatusCreated)
 	render.JSON(w, r, map[string]interface{}{
@@ -105,13 +81,15 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUser(w http.ResponseWriter, r *http.Request) {
-	f, _ := ioutil.ReadFile(store)
-	s := UserStore{}
-	_ = json.Unmarshal(f, &s)
-
 	id := chi.URLParam(r, "id")
 
-	render.JSON(w, r, s.List[id])
+	user, err := usersRepo.GetUser(id)
+	if err != nil {
+		_ = render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	render.JSON(w, r, user)
 }
 
 type UpdateUserRequest struct {
@@ -121,10 +99,6 @@ type UpdateUserRequest struct {
 func (c *UpdateUserRequest) Bind(r *http.Request) error { return nil }
 
 func updateUser(w http.ResponseWriter, r *http.Request) {
-	f, _ := ioutil.ReadFile(store)
-	s := UserStore{}
-	_ = json.Unmarshal(f, &s)
-
 	request := UpdateUserRequest{}
 
 	if err := render.Bind(r, &request); err != nil {
@@ -134,37 +108,31 @@ func updateUser(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
 
-	if _, ok := s.List[id]; !ok {
-		_ = render.Render(w, r, ErrInvalidRequest(UserNotFound))
+	user, err := usersRepo.GetUser(id)
+	if err != nil {
+		_ = render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
-	u := s.List[id]
-	u.DisplayName = request.DisplayName
-	s.List[id] = u
+	user.DisplayName = request.DisplayName
 
-	b, _ := json.Marshal(&s)
-	_ = ioutil.WriteFile(store, b, fs.ModePerm)
+	err = usersRepo.UpdateUser(id, &user)
+	if err != nil {
+		_ = render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
 
 	render.Status(r, http.StatusNoContent)
 }
 
 func deleteUser(w http.ResponseWriter, r *http.Request) {
-	f, _ := ioutil.ReadFile(store)
-	s := UserStore{}
-	_ = json.Unmarshal(f, &s)
-
 	id := chi.URLParam(r, "id")
 
-	if _, ok := s.List[id]; !ok {
-		_ = render.Render(w, r, ErrInvalidRequest(UserNotFound))
+	err := usersRepo.DeleteUser(id)
+	if err != nil {
+		_ = render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
-
-	delete(s.List, id)
-
-	b, _ := json.Marshal(&s)
-	_ = ioutil.WriteFile(store, b, fs.ModePerm)
 
 	render.Status(r, http.StatusNoContent)
 }
