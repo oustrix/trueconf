@@ -39,6 +39,12 @@ type UsersRepository struct {
 }
 
 func NewUsersRepository(storePath string) *UsersRepository {
+	store := openUsersStore(storePath)
+	if store.List == nil {
+		store.List = make(entity.UserList)
+		store.save()
+	}
+
 	return &UsersRepository{
 		storePath: storePath,
 	}
