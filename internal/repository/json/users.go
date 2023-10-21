@@ -44,11 +44,11 @@ func NewUsersRepository(storePath string) *UsersRepository {
 	}
 }
 
-func (r *UsersRepository) GetUsers() entity.UserList {
+func (r *UsersRepository) GetUsers() *entity.UserList {
 	s := openUsersStore(r.storePath)
 	defer s.save()
 
-	return s.List
+	return &s.List
 }
 
 func (r *UsersRepository) CreateUser(user *entity.User) string {

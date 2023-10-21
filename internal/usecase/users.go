@@ -1,10 +1,6 @@
 package usecase
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
-	"net/http"
-	v1 "refactoring/internal/controller/http/v1"
 	"refactoring/internal/entity"
 	repo "refactoring/internal/repository/json"
 	"time"
@@ -20,32 +16,17 @@ func NewUsersUseCase(r *repo.UsersRepository) *UsersUseCase {
 	}
 }
 
-func (uc *UsersUseCase) GetUsers(w http.ResponseWriter, r *http.Request) {
-	users := uc.repo.GetUsers()
-
-	render.JSON(w, r, users)
+func (uc *UsersUseCase) GetUsers() *entity.UserList {
+	return uc.repo.GetUsers()
 }
 
-func (uc *UsersUseCase) GetUser(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-
+func (uc *UsersUseCase) GetUser(id string) (*entity.User, error) {
 	user, err := uc.repo.GetUser(id)
-	if err != nil {
-		_ = render.Render(w, r, v1.ErrInvalidRequest(err))
-		return
-	}
 
-	render.JSON(w, r, user)
+	return &user, err
 }
 
-func (uc *UsersUseCase) CreateUser(w http.ResponseWriter, r *http.Request) {
-	request := entity.CreateUserRequest{}
-
-	if err := render.Bind(r, &request); err != nil {
-		_ = render.Render(w, r, v1.ErrInvalidRequest(err))
-		return
-	}
-
+func (uc *UsersUseCase) CreateUser(request entity.CreateUserRequest) string {
 	u := entity.User{
 		CreatedAt:   time.Now(),
 		DisplayName: request.DisplayName,
@@ -54,47 +35,26 @@ func (uc *UsersUseCase) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	id := uc.repo.CreateUser(&u)
 
-	render.Status(r, http.StatusCreated)
-	render.JSON(w, r, map[string]interface{}{
-		"user_id": id,
-	})
+	return id
 }
 
-func (uc *UsersUseCase) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	request := entity.UpdateUserRequest{}
-
-	if err := render.Bind(r, &request); err != nil {
-		_ = render.Render(w, r, v1.ErrInvalidRequest(err))
-		return
-	}
-
-	id := chi.URLParam(r, "id")
+func (uc *UsersUseCase) UpdateUser(id string, request entity.UpdateUserRequest) error {
 
 	user, err := uc.repo.GetUser(id)
 	if err != nil {
-		_ = render.Render(w, r, v1.ErrInvalidRequest(err))
-		return
+		return err
 	}
 
 	user.DisplayName = request.DisplayName
 
 	err = uc.repo.UpdateUser(id, &user)
 	if err != nil {
-		_ = render.Render(w, r, v1.ErrInvalidRequest(err))
-		return
+		return err
 	}
 
-	render.Status(r, http.StatusNoContent)
+	return nil
 }
 
-func (uc *UsersUseCase) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-
-	err := uc.repo.DeleteUser(id)
-	if err != nil {
-		_ = render.Render(w, r, v1.ErrInvalidRequest(err))
-		return
-	}
-
-	render.Status(r, http.StatusNoContent)
+func (uc *UsersUseCase) DeleteUser(id string) error {
+	return uc.repo.DeleteUser(id)
 }
